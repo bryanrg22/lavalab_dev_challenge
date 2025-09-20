@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { ordersAPI } from "../services/api"
 
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -38,57 +39,7 @@ const AlertIcon = () => (
   </svg>
 )
 
-// Sample order data
-const ordersData = [
-  {
-    id: "ORD-001",
-    customer: "John Smith",
-    email: "john@example.com",
-    status: "In Progress",
-    orderDate: "2024-01-15",
-    expectedDelivery: "2024-01-20",
-    items: [
-      { productId: 1, productName: "Custom T-Shirt - Red / M", quantity: 2, price: 25.99 },
-      { productId: 2, productName: "Custom T-Shirt - Black / L", quantity: 1, price: 25.99 }
-    ],
-    total: 77.97,
-    shortages: [
-      { materialId: 1, materialName: "Gildan T-Shirt - Red / M", needed: 2, available: 1, short: 1 }
-    ],
-    trackingNumber: null,
-    shippingAddress: "123 Main St, City, State 12345"
-  },
-  {
-    id: "ORD-002",
-    customer: "Sarah Johnson",
-    email: "sarah@example.com",
-    status: "Reserved",
-    orderDate: "2024-01-16",
-    expectedDelivery: "2024-01-22",
-    items: [
-      { productId: 3, productName: "Custom T-Shirt - White / S", quantity: 3, price: 25.99 }
-    ],
-    total: 77.97,
-    shortages: [],
-    trackingNumber: null,
-    shippingAddress: "456 Oak Ave, City, State 12345"
-  },
-  {
-    id: "ORD-003",
-    customer: "Mike Wilson",
-    email: "mike@example.com",
-    status: "Shipped",
-    orderDate: "2024-01-14",
-    expectedDelivery: "2024-01-18",
-    items: [
-      { productId: 1, productName: "Custom T-Shirt - Red / M", quantity: 1, price: 25.99 }
-    ],
-    total: 25.99,
-    shortages: [],
-    trackingNumber: "1Z999AA1234567890",
-    shippingAddress: "789 Pine St, City, State 12345"
-  }
-]
+// Data will be loaded from backend APIs
 
 const statusColors = {
   "Queued": "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -102,28 +53,66 @@ const statusColors = {
 function Fulfillment() {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("All")
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [showOrderDetail, setShowOrderDetail] = useState(false)
   const [trackingNumber, setTrackingNumber] = useState("")
 
-  const filteredOrders = ordersData.filter((order) => {
+  // Load data from backend on component mount
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const ordersData = await ordersAPI.getAll()
+      setOrders(ordersData)
+      
+    } catch (err) {
+      console.error('Error loading orders:', err)
+      setError('Failed to load orders. Please check if the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredOrders = (orders || []).filter((order) => {
     const matchesSearch = order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.id.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === "All" || order.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
-  const handleStatusChange = (orderId, newStatus) => {
-    // In real app, this would update the database
-    console.log(`Updating order ${orderId} to status: ${newStatus}`)
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      const updatedOrder = await ordersAPI.update(orderId, { status: newStatus })
+      setOrders(prev => 
+        (prev || []).map(order => order.id === orderId ? updatedOrder : order)
+      )
+    } catch (err) {
+      console.error('Error updating order status:', err)
+      setError('Failed to update order status. Please try again.')
+    }
   }
 
-  const handleAddTracking = (orderId) => {
+  const handleAddTracking = async (orderId) => {
     if (trackingNumber.trim()) {
-      // In real app, this would update the database
-      console.log(`Adding tracking number ${trackingNumber} to order ${orderId}`)
-      setTrackingNumber("")
-      setShowOrderDetail(false)
+      try {
+        const updatedOrder = await ordersAPI.update(orderId, { tracking_number: trackingNumber })
+      setOrders(prev => 
+        (prev || []).map(order => order.id === orderId ? updatedOrder : order)
+      )
+        setTrackingNumber("")
+        setShowOrderDetail(false)
+      } catch (err) {
+        console.error('Error adding tracking number:', err)
+        setError('Failed to add tracking number. Please try again.')
+      }
     }
   }
 
@@ -133,7 +122,7 @@ function Fulfillment() {
   }
 
   return (
-    <div className="flex-1 bg-white">
+    <div className="flex-1 bg-white min-h-screen">
       {/* Header */}
       <div className="px-6 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -160,7 +149,7 @@ function Fulfillment() {
                   fontSize: '14px',
                   lineHeight: '100%',
                   letterSpacing: '0%',
-                  color: '#858585'
+                  color: '#1A1A1A'
                 }}
               />
             </div>
@@ -168,13 +157,15 @@ function Fulfillment() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A3AFF] focus:border-transparent outline-none"
+              className="px-4 py-2.5 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A3AFF] focus:border-transparent outline-none bg-white shadow-sm hover:shadow-md transition-all duration-200"
               style={{
                 fontFamily: 'Uncut Sans, sans-serif',
-                fontWeight: 400,
+                fontWeight: 500,
                 fontSize: '14px',
                 lineHeight: '100%',
-                letterSpacing: '0%'
+                letterSpacing: '0%',
+                color: '#1A1A1A',
+                minWidth: '140px'
               }}
             >
               <option value="All">All Status</option>
@@ -187,16 +178,51 @@ function Fulfillment() {
             </select>
           </div>
         </div>
+
+        {/* Loading and Error States */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#444EAA] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading orders...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-red-400 mr-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-red-800 font-medium">Error</p>
+                <p className="text-red-700 text-sm">{error}</p>
+                <button 
+                  onClick={loadData}
+                  className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Orders List */}
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-12">
         <div className="space-y-3">
-          {filteredOrders.map((order) => (
+          {(filteredOrders || []).map((order) => (
             <div
               key={order.id}
-              className="p-4 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors cursor-pointer"
+              className="p-5 bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer"
               onClick={() => handleViewOrder(order)}
+              style={{
+                boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)'
+              }}
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -224,10 +250,10 @@ function Fulfillment() {
                     </span>
                   </div>
 
-                  {order.shortages.length > 0 && (
-                    <div className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 rounded-md">
+                  {(order.shortages || []).length > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 text-red-800 rounded-lg shadow-sm">
                       <AlertIcon />
-                      <span className="text-xs font-medium">{order.shortages.length} Shortage{order.shortages.length > 1 ? 's' : ''}</span>
+                      <span className="text-xs font-semibold">{(order.shortages || []).length} Shortage{(order.shortages || []).length > 1 ? 's' : ''}</span>
                     </div>
                   )}
                 </div>
@@ -253,18 +279,18 @@ function Fulfillment() {
                       color: '#666666',
                       marginTop: '2px'
                     }}>
-                      {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                      {(order.items || []).length} item{(order.items || []).length > 1 ? 's' : ''}
                     </div>
                   </div>
 
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${statusColors[order.status]}`}>
+                  <span className={`px-3 py-1.5 rounded-full text-xs font-semibold border ${statusColors[order.status]} shadow-sm`}>
                     {order.status}
                   </span>
 
                   {order.trackingNumber && (
-                    <div className="flex items-center gap-1 text-green-600">
+                    <div className="flex items-center gap-1.5 px-2 py-1 bg-green-50 border border-green-200 text-green-700 rounded-lg">
                       <TruckIcon />
-                      <span className="text-xs">Shipped</span>
+                      <span className="text-xs font-medium">Shipped</span>
                     </div>
                   )}
                 </div>
@@ -277,9 +303,9 @@ function Fulfillment() {
       {/* Order Detail Modal */}
       {showOrderDetail && selectedOrder && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto mx-4 shadow-2xl">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold">Order Details - {selectedOrder.id}</h3>
+              <h3 className="text-lg font-semibold" style={{ color: '#1A1A1A' }}>Order Details - {selectedOrder.id}</h3>
               <button
                 onClick={() => setShowOrderDetail(false)}
                 className="text-gray-400 hover:text-gray-600"
@@ -290,8 +316,8 @@ function Fulfillment() {
 
             {/* Customer Info */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-medium mb-2">Customer Information</h4>
-              <div className="text-sm text-gray-600">
+              <h4 className="font-medium mb-2" style={{ color: '#1A1A1A' }}>Customer Information</h4>
+              <div className="text-sm" style={{ color: '#1A1A1A' }}>
                 <div><strong>Name:</strong> {selectedOrder.customer}</div>
                 <div><strong>Email:</strong> {selectedOrder.email}</div>
                 <div><strong>Address:</strong> {selectedOrder.shippingAddress}</div>
@@ -300,33 +326,33 @@ function Fulfillment() {
 
             {/* Order Items */}
             <div className="mb-6">
-              <h4 className="font-medium mb-3">Order Items</h4>
+              <h4 className="font-medium mb-3" style={{ color: '#1A1A1A' }}>Order Items</h4>
               <div className="space-y-2">
-                {selectedOrder.items.map((item, index) => (
+                {(selectedOrder.items || []).map((item, index) => (
                   <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span className="text-sm">{item.productName}</span>
-                    <div className="text-sm">
+                    <span className="text-sm" style={{ color: '#1A1A1A' }}>{item.productName}</span>
+                    <div className="text-sm" style={{ color: '#1A1A1A' }}>
                       <span className="font-medium">{item.quantity}x</span>
-                      <span className="ml-2">${item.price.toFixed(2)}</span>
+                      <span className="ml-2">${(item.price || 0).toFixed(2)}</span>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="mt-3 pt-3 border-t border-gray-200 flex justify-between items-center">
-                <span className="font-medium">Total:</span>
-                <span className="font-bold">${selectedOrder.total.toFixed(2)}</span>
+                <span className="font-medium" style={{ color: '#1A1A1A' }}>Total:</span>
+                <span className="font-bold" style={{ color: '#1A1A1A' }}>${(selectedOrder.total || 0).toFixed(2)}</span>
               </div>
             </div>
 
             {/* Shortages */}
-            {selectedOrder.shortages.length > 0 && (
+            {(selectedOrder.shortages || []).length > 0 && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
                 <h4 className="font-medium text-red-800 mb-3 flex items-center gap-2">
                   <AlertIcon />
                   Material Shortages
                 </h4>
                 <div className="space-y-2">
-                  {selectedOrder.shortages.map((shortage, index) => (
+                  {(selectedOrder.shortages || []).map((shortage, index) => (
                     <div key={index} className="text-sm text-red-700">
                       <div><strong>{shortage.materialName}</strong></div>
                       <div>Needed: {shortage.needed} • Available: {shortage.available} • Short: {shortage.short}</div>
