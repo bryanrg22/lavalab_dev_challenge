@@ -264,33 +264,77 @@ function Materials({ sidebarExpanded }) {
 
         {/* Search and Add Button */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[#6B7280]" />
-              <input
-                type="text"
-                placeholder={activeTab === "Inventory" ? "Search Materials" : "Search Orders"}
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A3AFF] focus:border-transparent outline-none w-80 text-gray-900"
-                style={{
-                  fontFamily: 'Uncut Sans, sans-serif',
-                  fontWeight: 400,
-                  fontSize: '14px',
-                  lineHeight: '100%',
-                  letterSpacing: '0%',
-                  color: '#1A1A1A'
-                }}
-              />
+          <div className="flex items-center gap-4">
+            {/* Premium Search Bar Design */}
+            <div className="relative group">
+              {/* Animated background glow */}
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-2xl blur opacity-0 group-hover:opacity-20 transition duration-500"></div>
+              
+              {/* Main search container */}
+              <div className="relative bg-white border border-gray-200 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 group-hover:border-blue-300 overflow-hidden">
+                {/* Search icon with enhanced styling */}
+                <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
+                  <div className="w-5 h-5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                    <SearchIcon className="w-3 h-3 text-white" />
+                  </div>
+                </div>
+                
+                <input
+                  type="text"
+                  placeholder={activeTab === "Inventory" ? "Search Materials..." : "Search Orders..."}
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-14 pr-16 py-4 bg-transparent rounded-2xl focus:ring-0 focus:outline-none w-96 text-gray-900 placeholder-gray-500 font-medium"
+                  style={{
+                    fontFamily: 'Uncut Sans, sans-serif',
+                    fontWeight: 500,
+                    fontSize: '15px',
+                    lineHeight: '100%',
+                    letterSpacing: '0%',
+                    color: '#1A1A1A'
+                  }}
+                />
+                
+                {/* Right side indicators */}
+                <div className="absolute right-4 top-1/2 transform -translate-y-1/2 flex items-center gap-2">
+                  {/* Search status indicator */}
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-xs text-gray-400 font-medium">Live</span>
+                  </div>
+                  
+                  {/* Clear button (appears when typing) */}
+                  {searchTerm && (
+                    <button
+                      onClick={() => setSearchTerm("")}
+                      className="w-6 h-6 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors duration-200"
+                    >
+                      <svg className="w-3 h-3 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+                
+                {/* Animated underline */}
+                <div className="absolute bottom-0 left-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300 origin-left"></div>
+              </div>
             </div>
 
-            <div className="flex gap-2">
-              <button className="flex items-center justify-center w-9 h-9 text-[#6B7280] hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                <FilterIcon />
+            {/* Enhanced Action Buttons */}
+            <div className="flex gap-3">
+              <button className="group flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-50 to-blue-100 hover:from-blue-100 hover:to-blue-200 text-blue-700 rounded-xl transition-all duration-300 hover:shadow-lg border border-blue-200 hover:border-blue-300">
+                <div className="w-5 h-5 bg-blue-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                  <FilterIcon className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-sm font-semibold">Filter</span>
               </button>
 
-              <button className="flex items-center justify-center w-9 h-9 text-[#6B7280] hover:text-gray-900 hover:bg-gray-50 transition-colors">
-                <SortIcon />
+              <button className="group flex items-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-50 to-purple-100 hover:from-purple-100 hover:to-purple-200 text-purple-700 rounded-xl transition-all duration-300 hover:shadow-lg border border-purple-200 hover:border-purple-300">
+                <div className="w-5 h-5 bg-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                  <SortIcon className="w-3 h-3 text-white" />
+                </div>
+                <span className="text-sm font-semibold">Sort</span>
               </button>
             </div>
           </div>
