@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { productsAPI, materialsAPI } from "../services/api"
 
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -35,60 +36,14 @@ const ProductIcon = ({ color = "blue" }) => (
   </div>
 )
 
-// Sample materials data (would come from Materials page in real app)
-const materialsData = [
-  { id: 1, name: "Gildan T-Shirt - Red / M", color: "red", quantity: 13 },
-  { id: 2, name: "Gildan T-Shirt - Red / L", color: "red", quantity: 46 },
-  { id: 3, name: "Gildan T-Shirt - Black / S", color: "black", quantity: 21 },
-  { id: 4, name: "Gildan T-Shirt - Black / M", color: "black", quantity: 34 },
-  { id: 5, name: "Gildan T-Shirt - Black / L", color: "black", quantity: 27 },
-  { id: 6, name: "Gildan T-Shirt - White / S", color: "white", quantity: 34 },
-  { id: 7, name: "Gildan T-Shirt - White / M", color: "white", quantity: 51 },
-  { id: 8, name: "Gildan T-Shirt - White / L", color: "white", quantity: 29 },
-]
-
-// Sample products with BOM (Bill of Materials)
-const productsData = [
-  {
-    id: 1,
-    name: "Custom T-Shirt - Red / M",
-    sku: "TSH-RED-M-001",
-    color: "blue",
-    price: 25.99,
-    bom: [
-      { materialId: 1, materialName: "Gildan T-Shirt - Red / M", quantity: 1 },
-      { materialId: 9, materialName: "Custom Print Design", quantity: 1 }
-    ],
-    canBuild: 13
-  },
-  {
-    id: 2,
-    name: "Custom T-Shirt - Black / L",
-    sku: "TSH-BLK-L-002",
-    color: "green",
-    price: 25.99,
-    bom: [
-      { materialId: 5, materialName: "Gildan T-Shirt - Black / L", quantity: 1 },
-      { materialId: 9, materialName: "Custom Print Design", quantity: 1 }
-    ],
-    canBuild: 27
-  },
-  {
-    id: 3,
-    name: "Custom T-Shirt - White / S",
-    sku: "TSH-WHT-S-003",
-    color: "purple",
-    price: 25.99,
-    bom: [
-      { materialId: 6, materialName: "Gildan T-Shirt - White / S", quantity: 1 },
-      { materialId: 9, materialName: "Custom Print Design", quantity: 1 }
-    ],
-    canBuild: 34
-  }
-]
+// Data will be loaded from backend APIs
 
 function Products() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [products, setProducts] = useState([])
+  const [materials, setMaterials] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
   const [showBomModal, setShowBomModal] = useState(false)
   const [selectedProduct, setSelectedProduct] = useState(null)
@@ -99,7 +54,33 @@ function Products() {
     bom: []
   })
 
-  const filteredProducts = productsData.filter((product) => 
+  // Load data from backend on component mount
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const [productsData, materialsData] = await Promise.all([
+        productsAPI.getAll(),
+        materialsAPI.getAll()
+      ])
+      
+      setProducts(productsData)
+      setMaterials(materialsData)
+      
+    } catch (err) {
+      console.error('Error loading data:', err)
+      setError('Failed to load data. Please check if the backend is running.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const filteredProducts = (products || []).filter((product) => 
     product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     product.sku.toLowerCase().includes(searchTerm.toLowerCase())
   )
@@ -108,16 +89,21 @@ function Products() {
     if (!bom || bom.length === 0) return 0
     
     return Math.min(...bom.map(item => {
-      const material = materialsData.find(m => m.id === item.materialId)
+      const material = materials.find(m => m.id === item.materialId)
       return material ? Math.floor(material.quantity / item.quantity) : 0
     }))
   }
 
-  const handleAddProduct = () => {
-    // In real app, this would save to database
-    console.log("Adding product:", newProduct)
-    setShowAddModal(false)
-    setNewProduct({ name: "", sku: "", price: "", bom: [] })
+  const handleAddProduct = async () => {
+    try {
+      const createdProduct = await productsAPI.create(newProduct)
+      setProducts(prev => [...prev, createdProduct])
+      setShowAddModal(false)
+      setNewProduct({ name: "", sku: "", price: "", bom: [] })
+    } catch (err) {
+      console.error('Error adding product:', err)
+      setError('Failed to add product. Please try again.')
+    }
   }
 
   const handleViewBom = (product) => {
@@ -126,7 +112,7 @@ function Products() {
   }
 
   return (
-    <div className="flex-1 bg-white">
+    <div className="flex-1 bg-white min-h-screen">
       {/* Header */}
       <div className="px-6 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -153,7 +139,7 @@ function Products() {
                   fontSize: '14px',
                   lineHeight: '100%',
                   letterSpacing: '0%',
-                  color: '#858585'
+                  color: '#1A1A1A'
                 }}
               />
             </div>
@@ -174,12 +160,44 @@ function Products() {
             }}>Add New Product</span>
           </button>
         </div>
+
+        {/* Loading and Error States */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#444EAA] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading products...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-red-400 mr-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-red-800 font-medium">Error</p>
+                <p className="text-red-700 text-sm">{error}</p>
+                <button 
+                  onClick={loadData}
+                  className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Products List */}
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-12">
         <div className="space-y-3">
-          {filteredProducts.map((product) => (
+          {(filteredProducts || []).map((product) => (
             <div
               key={product.id}
               className="flex items-center justify-between py-6 px-4 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
@@ -263,11 +281,11 @@ function Products() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Add New Product</h3>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: '#1A1A1A' }}>Add New Product</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Product Name</label>
                 <input
                   type="text"
                   value={newProduct.name}
@@ -278,7 +296,7 @@ function Products() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>SKU</label>
                 <input
                   type="text"
                   value={newProduct.sku}
@@ -289,7 +307,7 @@ function Products() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Price</label>
                 <input
                   type="number"
                   step="0.01"
@@ -305,6 +323,7 @@ function Products() {
               <button
                 onClick={() => setShowAddModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ color: '#1A1A1A' }}
               >
                 Cancel
               </button>
@@ -323,14 +342,14 @@ function Products() {
       {showBomModal && selectedProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Bill of Materials</h3>
-            <p className="text-sm text-gray-600 mb-4">{selectedProduct.name}</p>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: '#1A1A1A' }}>Bill of Materials</h3>
+            <p className="text-sm mb-4" style={{ color: '#1A1A1A' }}>{selectedProduct.name}</p>
             
             <div className="space-y-3">
               {selectedProduct.bom.map((item, index) => (
                 <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <span className="text-sm">{item.materialName}</span>
-                  <span className="text-sm font-medium">{item.quantity}x</span>
+                  <span className="text-sm" style={{ color: '#1A1A1A' }}>{item.materialName}</span>
+                  <span className="text-sm font-medium" style={{ color: '#1A1A1A' }}>{item.quantity}x</span>
                 </div>
               ))}
             </div>

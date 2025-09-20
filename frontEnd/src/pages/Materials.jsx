@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { materialsAPI, orderQueueAPI } from "../services/api"
 
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -49,61 +50,7 @@ const TShirtIcon = ({ color = "red" }) => (
   </div>
 )
 
-const inventoryData = [
-  { id: 1, name: "Gildan T-Shirt - Red / M", color: "red", quantity: 13, unit: "24 PCS", required: 24 },
-  { id: 2, name: "Gildan T-Shirt - Red / L", color: "red", quantity: 46, unit: "24 PCS", required: 24 },
-  { id: 3, name: "Gildan T-Shirt - Black / S", color: "black", quantity: 21, unit: "24 PCS", required: 24 },
-  { id: 4, name: "Gildan T-Shirt - Black / M", color: "black", quantity: 34, unit: "24 PCS", required: 24 },
-  { id: 5, name: "Gildan T-Shirt - Black / L", color: "black", quantity: 27, unit: "24 PCS", required: 24 },
-  { id: 6, name: "Gildan T-Shirt - White / S", color: "white", quantity: 34, unit: "24 PCS", required: 24 },
-  { id: 7, name: "Gildan T-Shirt - White / M", color: "white", quantity: 51, unit: "24 PCS", required: 24 },
-  { id: 8, name: "Gildan T-Shirt - White / L", color: "white", quantity: 29, unit: "24 PCS", required: 24 },
-]
-
-// Sample order queue data
-const orderQueueData = [
-  {
-    id: "ORD-001",
-    customer: "John Smith",
-    email: "john@example.com",
-    status: "Queued",
-    orderDate: "2024-01-15",
-    expectedDelivery: "2024-01-20",
-    items: [
-      { materialId: 1, materialName: "Gildan T-Shirt - Red / M", quantity: 2 },
-      { materialId: 5, materialName: "Gildan T-Shirt - Black / L", quantity: 1 }
-    ],
-    total: 77.97,
-    canFulfill: true
-  },
-  {
-    id: "ORD-002",
-    customer: "Sarah Johnson",
-    email: "sarah@example.com",
-    status: "Reserved",
-    orderDate: "2024-01-16",
-    expectedDelivery: "2024-01-22",
-    items: [
-      { materialId: 6, materialName: "Gildan T-Shirt - White / S", quantity: 3 }
-    ],
-    total: 77.97,
-    canFulfill: true
-  },
-  {
-    id: "ORD-003",
-    customer: "Mike Wilson",
-    email: "mike@example.com",
-    status: "Queued",
-    orderDate: "2024-01-17",
-    expectedDelivery: "2024-01-23",
-    items: [
-      { materialId: 1, materialName: "Gildan T-Shirt - Red / M", quantity: 5 }
-    ],
-    total: 129.95,
-    canFulfill: false,
-    shortage: "Insufficient Red / M inventory"
-  }
-]
+// Data will be loaded from backend APIs
 
 const statusColors = {
   "Queued": "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -117,9 +64,11 @@ const statusColors = {
 function Materials({ sidebarExpanded }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [activeTab, setActiveTab] = useState("Inventory")
-  const [quantities, setQuantities] = useState(
-    inventoryData.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {}),
-  )
+  const [materials, setMaterials] = useState([])
+  const [orderQueue, setOrderQueue] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [quantities, setQuantities] = useState({})
   const [showAddModal, setShowAddModal] = useState(false)
   const [showOrderModal, setShowOrderModal] = useState(false)
   const [newMaterial, setNewMaterial] = useState({
@@ -135,40 +84,113 @@ function Materials({ sidebarExpanded }) {
     items: []
   })
 
-  const updateQuantity = (id, change) => {
-    setQuantities((prev) => ({
-      ...prev,
-      [id]: Math.max(0, prev[id] + change),
-    }))
+  // Load data from backend on component mount
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const [materialsData, orderQueueData] = await Promise.all([
+        materialsAPI.getAll(),
+        orderQueueAPI.getAll()
+      ])
+      
+      setMaterials(materialsData || [])
+      setOrderQueue(orderQueueData || [])
+      
+      // Initialize quantities state
+      const initialQuantities = (materialsData || []).reduce((acc, item) => ({ 
+        ...acc, 
+        [item.id]: item.quantity 
+      }), {})
+      setQuantities(initialQuantities)
+      
+    } catch (err) {
+      console.error('Error loading data:', err)
+      setError('Failed to load data. Please check if the backend is running.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const filteredData = inventoryData.filter((item) => item.name.toLowerCase().includes(searchTerm.toLowerCase()))
-  const filteredOrders = orderQueueData.filter((order) => 
+  const updateQuantity = async (id, change) => {
+    const newQuantity = Math.max(0, quantities[id] + change)
+    
+    // Update local state immediately for better UX
+    setQuantities((prev) => ({
+      ...prev,
+      [id]: newQuantity,
+    }))
+    
+    // Update backend
+    try {
+      const material = materials.find(m => m.id === id)
+      if (material) {
+        await materialsAPI.update(id, { ...material, quantity: newQuantity })
+        // Refresh materials data to ensure consistency
+        const updatedMaterials = await materialsAPI.getAll()
+        setMaterials(updatedMaterials)
+      }
+    } catch (err) {
+      console.error('Error updating quantity:', err)
+      // Revert local state on error
+      setQuantities((prev) => ({
+        ...prev,
+        [id]: quantities[id],
+      }))
+    }
+  }
+
+  const filteredData = (materials || []).filter((item) => 
+    item.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
+  const filteredOrders = (orderQueue || []).filter((order) => 
     order.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
     order.id.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const handleAddMaterial = () => {
-    // In real app, this would save to database
-    console.log("Adding material:", newMaterial)
-    setShowAddModal(false)
-    setNewMaterial({ name: "", color: "red", quantity: 0, unit: "24 PCS", required: 24 })
+  const handleAddMaterial = async () => {
+    try {
+      const createdMaterial = await materialsAPI.create(newMaterial)
+      setMaterials(prev => [...prev, createdMaterial])
+      setShowAddModal(false)
+      setNewMaterial({ name: "", color: "red", quantity: 0, unit: "24 PCS", required: 24 })
+    } catch (err) {
+      console.error('Error adding material:', err)
+      setError('Failed to add material. Please try again.')
+    }
   }
 
-  const handleCreateOrder = () => {
-    // In real app, this would save to database
-    console.log("Creating order:", newOrder)
-    setShowOrderModal(false)
-    setNewOrder({ customer: "", email: "", items: [] })
+  const handleCreateOrder = async () => {
+    try {
+      const createdOrder = await orderQueueAPI.create(newOrder)
+      setOrderQueue(prev => [...prev, createdOrder])
+      setShowOrderModal(false)
+      setNewOrder({ customer: "", email: "", items: [] })
+    } catch (err) {
+      console.error('Error creating order:', err)
+      setError('Failed to create order. Please try again.')
+    }
   }
 
-  const handleStatusChange = (orderId, newStatus) => {
-    // In real app, this would update the database
-    console.log(`Updating order ${orderId} to status: ${newStatus}`)
+  const handleStatusChange = async (orderId, newStatus) => {
+    try {
+      const updatedOrder = await orderQueueAPI.updateStatus(orderId, newStatus)
+      setOrderQueue(prev => 
+        prev.map(order => order.id === orderId ? updatedOrder : order)
+      )
+    } catch (err) {
+      console.error('Error updating order status:', err)
+      setError('Failed to update order status. Please try again.')
+    }
   }
 
   return (
-    <div className="flex-1 bg-white">
+    <div className="flex-1 bg-white min-h-screen">
       {/* Header */}
       <div className="px-6 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -234,7 +256,7 @@ function Materials({ sidebarExpanded }) {
                   fontSize: '14px',
                   lineHeight: '100%',
                   letterSpacing: '0%',
-                  color: '#858585'
+                  color: '#1A1A1A'
                 }}
               />
             </div>
@@ -265,14 +287,46 @@ function Materials({ sidebarExpanded }) {
             }}>{activeTab === "Inventory" ? "Add New Material" : "Create Order"}</span>
           </button>
         </div>
+
+        {/* Loading and Error States */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#444EAA] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading data...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-red-400 mr-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-red-800 font-medium">Error</p>
+                <p className="text-red-700 text-sm">{error}</p>
+                <button 
+                  onClick={loadData}
+                  className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Content based on active tab */}
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-12">
         {activeTab === "Inventory" ? (
           /* Inventory List */
           <div className="space-y-3">
-            {filteredData.map((item) => (
+            {(filteredData || []).map((item) => (
               <div
                 key={item.id}
                 className="flex items-center justify-between py-6 px-4 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
@@ -327,14 +381,14 @@ function Materials({ sidebarExpanded }) {
                       className="flex items-center justify-center"
                       style={{
                         height: '32px',
-                        backgroundColor: '#FAF2E3',
+                        backgroundColor: (quantities[item.id] || 0) < (item.required || 0) ? '#FAF2E3' : '#FFFFFF',
                         borderBottom: '1px solid #C19A4D',
                         fontFamily: 'Chivo Mono, monospace',
                         fontWeight: 300,
                         fontSize: '20px',
                         lineHeight: '100%',
                         letterSpacing: '0%',
-                        color: '#333333'
+                        color: '#1A1A1A'
                       }}
                     >
                       {quantities[item.id]}
@@ -383,7 +437,7 @@ function Materials({ sidebarExpanded }) {
         ) : (
           /* Order Queue List */
           <div className="space-y-3">
-            {filteredOrders.map((order) => (
+            {(filteredOrders || []).map((order) => (
               <div
                 key={order.id}
                 className="p-4 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
@@ -442,7 +496,7 @@ function Materials({ sidebarExpanded }) {
                         color: '#666666',
                         marginTop: '2px'
                       }}>
-                        {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                        {(order.items || []).length} item{(order.items || []).length > 1 ? 's' : ''}
                       </div>
                     </div>
 
@@ -477,11 +531,11 @@ function Materials({ sidebarExpanded }) {
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Add New Material</h3>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: '#1A1A1A' }}>Add New Material</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Material Name</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Material Name</label>
                 <input
                   type="text"
                   value={newMaterial.name}
@@ -492,7 +546,7 @@ function Materials({ sidebarExpanded }) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Color</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Color</label>
                 <select
                   value={newMaterial.color}
                   onChange={(e) => setNewMaterial({...newMaterial, color: e.target.value})}
@@ -507,7 +561,7 @@ function Materials({ sidebarExpanded }) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Initial Quantity</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Initial Quantity</label>
                 <input
                   type="number"
                   value={newMaterial.quantity}
@@ -518,7 +572,7 @@ function Materials({ sidebarExpanded }) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Unit</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Unit</label>
                 <input
                   type="text"
                   value={newMaterial.unit}
@@ -533,6 +587,7 @@ function Materials({ sidebarExpanded }) {
               <button
                 onClick={() => setShowAddModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ color: '#1A1A1A' }}
               >
                 Cancel
               </button>
@@ -551,11 +606,11 @@ function Materials({ sidebarExpanded }) {
       {showOrderModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4">Create New Order</h3>
+            <h3 className="text-lg font-semibold mb-4" style={{ color: '#1A1A1A' }}>Create New Order</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Customer Name</label>
                 <input
                   type="text"
                   value={newOrder.customer}
@@ -566,7 +621,7 @@ function Materials({ sidebarExpanded }) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Email</label>
                 <input
                   type="email"
                   value={newOrder.email}
@@ -577,14 +632,14 @@ function Materials({ sidebarExpanded }) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Order Items</label>
-                <div className="text-sm text-gray-500 mb-2">
+                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Order Items</label>
+                <div className="text-sm mb-2" style={{ color: '#1A1A1A' }}>
                   Select materials and quantities for this order
                 </div>
                 <div className="space-y-2 max-h-32 overflow-y-auto">
-                  {inventoryData.map((material) => (
+                  {(materials || []).map((material) => (
                     <div key={material.id} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                      <span className="text-sm">{material.name}</span>
+                      <span className="text-sm" style={{ color: '#1A1A1A' }}>{material.name}</span>
                       <input
                         type="number"
                         min="0"
@@ -601,6 +656,7 @@ function Materials({ sidebarExpanded }) {
               <button
                 onClick={() => setShowOrderModal(false)}
                 className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                style={{ color: '#1A1A1A' }}
               >
                 Cancel
               </button>

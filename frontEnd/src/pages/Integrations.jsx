@@ -1,4 +1,5 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { integrationsAPI } from "../services/api"
 
 const MailIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -45,144 +46,96 @@ const ExternalLinkIcon = () => (
 )
 
 function Integrations() {
-  const [integrations, setIntegrations] = useState({
-    email: {
-      enabled: true,
-      provider: "resend",
-      apiKey: "re_1234567890abcdef",
-      fromEmail: "orders@tally.com",
-      lowStockAlerts: true,
-      orderUpdates: true,
-      weeklyDigest: false
-    },
-    shopify: {
-      enabled: false,
-      shopDomain: "",
-      accessToken: "",
-      webhookSecret: "",
-      syncProducts: false,
-      syncOrders: false
-    },
-    woocommerce: {
-      enabled: false,
-      siteUrl: "",
-      consumerKey: "",
-      consumerSecret: "",
-      syncProducts: false,
-      syncOrders: false
-    },
-    slack: {
-      enabled: true,
-      webhookUrl: "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX",
-      lowStockAlerts: true,
-      orderUpdates: false,
-      weeklyDigest: true
-    },
-    webhooks: {
-      enabled: true,
-      orderCreated: "https://api.example.com/webhooks/order-created",
-      orderShipped: "https://api.example.com/webhooks/order-shipped",
-      lowStock: "https://api.example.com/webhooks/low-stock"
-    }
-  })
-
+  const [integrations, setIntegrations] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
   const [selectedIntegration, setSelectedIntegration] = useState("")
   const [newApiKey, setNewApiKey] = useState("")
 
-  const toggleIntegration = (category, field) => {
-    setIntegrations(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [field]: !prev[category][field]
-      }
-    }))
+  // Load data from backend on component mount
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const loadData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const integrationsData = await integrationsAPI.getAll()
+      setIntegrations(integrationsData)
+      
+    } catch (err) {
+      console.error('Error loading integrations:', err)
+      setError('Failed to load integrations. Please check if the backend is running.')
+    } finally {
+      setLoading(false)
+    }
   }
 
-  const updateIntegration = (category, field, value) => {
-    setIntegrations(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [field]: value
+  const toggleIntegration = async (integrationId) => {
+    try {
+      const integration = integrations.find(i => i.id === integrationId)
+      if (integration) {
+        const updatedIntegration = await integrationsAPI.update(integrationId, { 
+          enabled: !integration.enabled 
+        })
+        setIntegrations(prev => 
+          prev.map(i => i.id === integrationId ? updatedIntegration : i)
+        )
       }
-    }))
+    } catch (err) {
+      console.error('Error toggling integration:', err)
+      setError('Failed to update integration. Please try again.')
+    }
   }
 
-  const handleSaveApiKey = () => {
+  const updateIntegration = async (integrationId, field, value) => {
+    try {
+      const integration = integrations.find(i => i.id === integrationId)
+      if (integration) {
+        const updatedIntegration = await integrationsAPI.update(integrationId, { 
+          [field]: value 
+        })
+        setIntegrations(prev => 
+          prev.map(i => i.id === integrationId ? updatedIntegration : i)
+        )
+      }
+    } catch (err) {
+      console.error('Error updating integration:', err)
+      setError('Failed to update integration. Please try again.')
+    }
+  }
+
+  const handleSaveApiKey = async () => {
     if (selectedIntegration && newApiKey) {
-      updateIntegration(selectedIntegration, "apiKey", newApiKey)
-      setShowApiKeyModal(false)
-      setNewApiKey("")
-      setSelectedIntegration("")
+      try {
+        await updateIntegration(selectedIntegration, "api_key", newApiKey)
+        setShowApiKeyModal(false)
+        setNewApiKey("")
+        setSelectedIntegration("")
+      } catch (err) {
+        console.error('Error saving API key:', err)
+        setError('Failed to save API key. Please try again.')
+      }
     }
   }
 
-  const integrationCards = [
-    {
-      id: "email",
-      title: "Email Provider",
-      description: "Send transactional emails and alerts",
-      icon: <MailIcon />,
-      provider: integrations.email.provider,
-      enabled: integrations.email.enabled,
-      config: [
-        { key: "lowStockAlerts", label: "Low Stock Alerts", type: "toggle" },
-        { key: "orderUpdates", label: "Order Status Updates", type: "toggle" },
-        { key: "weeklyDigest", label: "Weekly Inventory Digest", type: "toggle" }
-      ]
-    },
-    {
-      id: "shopify",
-      title: "Shopify",
-      description: "Sync products and orders with Shopify store",
-      icon: <ShoppingCartIcon />,
-      provider: "shopify",
-      enabled: integrations.shopify.enabled,
-      config: [
-        { key: "syncProducts", label: "Sync Products", type: "toggle" },
-        { key: "syncOrders", label: "Sync Orders", type: "toggle" }
-      ]
-    },
-    {
-      id: "woocommerce",
-      title: "WooCommerce",
-      description: "Connect with WooCommerce store",
-      icon: <ShoppingCartIcon />,
-      provider: "woocommerce",
-      enabled: integrations.woocommerce.enabled,
-      config: [
-        { key: "syncProducts", label: "Sync Products", type: "toggle" },
-        { key: "syncOrders", label: "Sync Orders", type: "toggle" }
-      ]
-    },
-    {
-      id: "slack",
-      title: "Slack",
-      description: "Get notifications in Slack channels",
-      icon: <BellIcon />,
-      provider: "slack",
-      enabled: integrations.slack.enabled,
-      config: [
-        { key: "lowStockAlerts", label: "Low Stock Alerts", type: "toggle" },
-        { key: "orderUpdates", label: "Order Updates", type: "toggle" },
-        { key: "weeklyDigest", label: "Weekly Digest", type: "toggle" }
-      ]
-    },
-    {
-      id: "webhooks",
-      title: "Webhooks",
-      description: "Custom webhook endpoints for events",
-      icon: <DatabaseIcon />,
-      provider: "webhooks",
-      enabled: integrations.webhooks.enabled,
-      config: []
+  // Get icon for integration type
+  const getIcon = (name) => {
+    switch (name) {
+      case 'email': return <MailIcon />
+      case 'shopify': return <ShoppingCartIcon />
+      case 'woocommerce': return <ShoppingCartIcon />
+      case 'slack': return <BellIcon />
+      case 'webhooks': return <DatabaseIcon />
+      default: return <DatabaseIcon />
     }
-  ]
+  }
 
   return (
-    <div className="flex-1 bg-white">
+    <div className="flex-1 bg-white min-h-screen">
       {/* Header */}
       <div className="px-6 py-6">
         <div className="flex items-center justify-between mb-6">
@@ -191,12 +144,44 @@ function Integrations() {
             <span style={{ color: '#AAAAAA' }}> / Connections</span>
           </h1>
         </div>
+
+        {/* Loading and Error States */}
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#444EAA] mx-auto mb-4"></div>
+              <p className="text-gray-600">Loading integrations...</p>
+            </div>
+          </div>
+        )}
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <div className="text-red-400 mr-3">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-red-800 font-medium">Error</p>
+                <p className="text-red-700 text-sm">{error}</p>
+                <button 
+                  onClick={loadData}
+                  className="mt-2 text-red-600 hover:text-red-800 text-sm underline"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Integration Cards */}
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-12">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {integrationCards.map((integration) => (
+          {(integrations || []).map((integration) => (
             <div
               key={integration.id}
               className="p-6 bg-white rounded-lg border border-gray-100 hover:border-gray-200 transition-colors"
@@ -204,11 +189,11 @@ function Integrations() {
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-gray-100 rounded-lg text-gray-600">
-                    {integration.icon}
+                    {getIcon(integration.name)}
                   </div>
                   <div>
-                    <h3 className="font-semibold text-gray-900">{integration.title}</h3>
-                    <p className="text-sm text-gray-600">{integration.description}</p>
+                    <h3 className="font-semibold text-gray-900">{integration.display_name}</h3>
+                    <p className="text-sm text-gray-600">Integration service</p>
                   </div>
                 </div>
                 
@@ -216,57 +201,32 @@ function Integrations() {
                   <input
                     type="checkbox"
                     checked={integration.enabled}
-                    onChange={() => toggleIntegration(integration.id, "enabled")}
+                    onChange={() => toggleIntegration(integration.id)}
                     className="sr-only peer"
                   />
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
 
-              {/* Configuration Options */}
-              {integration.enabled && integration.config.length > 0 && (
-                <div className="space-y-3">
-                  <div className="border-t border-gray-100 pt-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-3">Configuration</h4>
-                    <div className="space-y-2">
-                      {integration.config.map((config) => (
-                        <div key={config.key} className="flex items-center justify-between">
-                          <span className="text-sm text-gray-600">{config.label}</span>
-                          <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={integrations[integration.id][config.key]}
-                              onChange={() => toggleIntegration(integration.id, config.key)}
-                              className="sr-only peer"
-                            />
-                            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* API Key Management */}
-              {integration.enabled && integration.id !== "webhooks" && (
+              {integration.enabled && (
                 <div className="border-t border-gray-100 pt-4 mt-4">
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="text-sm font-medium text-gray-700">API Configuration</h4>
                       <p className="text-xs text-gray-500 mt-1">
-                        {integrations[integration.id].apiKey ? "API Key configured" : "API Key required"}
+                        {integration.api_key ? "API Key configured" : "API Key required"}
                       </p>
                     </div>
                     <button
                       onClick={() => {
                         setSelectedIntegration(integration.id)
-                        setNewApiKey(integrations[integration.id].apiKey || "")
+                        setNewApiKey(integration.api_key || "")
                         setShowApiKeyModal(true)
                       }}
                       className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:text-blue-700 border border-blue-200 rounded-md hover:bg-blue-50 transition-colors"
                     >
-                      {integrations[integration.id].apiKey ? "Update" : "Configure"}
+                      {integration.api_key ? "Update" : "Configure"}
                       <ExternalLinkIcon />
                     </button>
                   </div>

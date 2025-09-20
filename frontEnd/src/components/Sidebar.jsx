@@ -42,6 +42,13 @@ const IntegrationsIcon = () => (
   </svg>
 )
 
+const AIIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <path d="M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 01-4.96.44 2.5 2.5 0 01-2.96-3.08 3 3 0 013-3.66 2.5 2.5 0 010-3.2 2.5 2.5 0 01-2.96-3.08A2.5 2.5 0 019.5 2z" />
+    <path d="M14.5 2A2.5 2.5 0 0012 4.5v15a2.5 2.5 0 004.96.44 2.5 2.5 0 002.96-3.08 3 3 0 00-3-3.66 2.5 2.5 0 000-3.2 2.5 2.5 0 002.96-3.08A2.5 2.5 0 0014.5 2z" />
+  </svg>
+)
+
 const LogoutIcon = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -55,6 +62,7 @@ const menuItems = [
   { path: "/products", label: "Products", icon: ProductsIcon },
   { path: "/fulfillment", label: "Fulfillment", icon: FulfillmentIcon },
   { path: "/integrations", label: "Integrations", icon: IntegrationsIcon },
+  { path: "/ai-assistant", label: "AI Assistant", icon: AIIcon },
 ]
 
 function Sidebar({ expanded = true, onToggle }) {
