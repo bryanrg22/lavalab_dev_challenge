@@ -92,9 +92,9 @@ def update_order_queue_status(order_id: str, order_update: OrderQueueUpdate, db:
     return order
 
 # Products endpoints
-@app.get("/api/products/", response_model=List[Product])
+@app.get("/api/products/")
 def get_products(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return products_service.get_products(db, skip=skip, limit=limit)
+    return products_service.get_products_with_bom(db, skip=skip, limit=limit)
 
 @app.get("/api/products/{product_id}", response_model=Product)
 def get_product(product_id: int, db: Session = Depends(get_db)):

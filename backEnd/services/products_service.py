@@ -1,10 +1,49 @@
 from sqlalchemy.orm import Session
 from typing import List, Optional
-from models import Product, Material
+from models import Product, Material, product_materials
 from schemas import ProductCreate, ProductUpdate
 
 def get_products(db: Session, skip: int = 0, limit: int = 100) -> List[Product]:
     return db.query(Product).offset(skip).limit(limit).all()
+
+def get_products_with_bom(db: Session, skip: int = 0, limit: int = 100) -> List[dict]:
+    """Get products with BOM data included"""
+    products = db.query(Product).offset(skip).limit(limit).all()
+    result = []
+    
+    for product in products:
+        # Get BOM data for this product
+        bom_data = []
+        for material in product.materials:
+            # Get the quantity required from the association table
+            association = db.query(product_materials).filter(
+                product_materials.c.product_id == product.id,
+                product_materials.c.material_id == material.id
+            ).first()
+            
+            if association:
+                bom_data.append({
+                    "materialName": material.name,
+                    "quantity": association.quantity,
+                    "materialId": material.id,
+                    "available": material.quantity
+                })
+        
+        # Convert product to dict and add BOM data
+        product_dict = {
+            "id": product.id,
+            "name": product.name,
+            "sku": product.sku,
+            "color": product.color,
+            "price": product.price,
+            "can_build": product.can_build,
+            "created_at": product.created_at,
+            "updated_at": product.updated_at,
+            "bom": bom_data
+        }
+        result.append(product_dict)
+    
+    return result
 
 def get_product(db: Session, product_id: int) -> Optional[Product]:
     return db.query(Product).filter(Product.id == product_id).first()
