@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:8000/api';
+const API_BASE_URL = 'http://localhost:8001/api';
 
 // Generic API helper function
 const apiRequest = async (endpoint, options = {}) => {
@@ -175,3 +175,39 @@ export const aiAPI = {
 export const healthAPI = {
   check: () => apiRequest('/health')
 };
+
+// Dashboard API
+export const dashboardAPI = {
+  // Get dashboard stats
+  getStats: () => apiRequest('/dashboard/stats'),
+  
+  // Get dashboard trends
+  getTrends: () => apiRequest('/dashboard/trends')
+};
+
+// Default API export for convenience
+const api = {
+  get: (endpoint) => apiRequest(endpoint),
+  post: (endpoint, data) => apiRequest(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(data)
+  }),
+  put: (endpoint, data) => apiRequest(endpoint, {
+    method: 'PUT',
+    body: JSON.stringify(data)
+  }),
+  delete: (endpoint) => apiRequest(endpoint, {
+    method: 'DELETE'
+  }),
+  // Include all the specific APIs
+  materials: materialsAPI,
+  orderQueue: orderQueueAPI,
+  products: productsAPI,
+  orders: ordersAPI,
+  integrations: integrationsAPI,
+  ai: aiAPI,
+  health: healthAPI,
+  dashboard: dashboardAPI
+};
+
+export default api;

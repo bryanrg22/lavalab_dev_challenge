@@ -5,6 +5,7 @@ import { Routes, Route } from "react-router-dom"
 import Sidebar from "./components/Sidebar"
 import InventoryLandingPage from "./pages/InventoryLandingPage"
 import AuthModal from "./components/AuthModal"
+import Dashboard from "./pages/Dashboard"
 import IconGrid from "./pages/IconGrid"
 import Materials from "./pages/Materials"
 import Products from "./pages/Products"
@@ -55,6 +56,10 @@ function App() {
     setIsSignUp(!isSignUp)
   }
 
+  const handleLogout = () => {
+    setIsAuthenticated(false)
+  }
+
   // If not authenticated, show landing page
   if (!isAuthenticated) {
     return (
@@ -80,13 +85,15 @@ function App() {
       <div ref={sidebarRef} onClick={handleSidebarClick}>
         <Sidebar 
           expanded={sidebarExpanded} 
-          onToggle={() => setSidebarExpanded(!sidebarExpanded)} 
+          onToggle={() => setSidebarExpanded(!sidebarExpanded)}
+          onLogout={handleLogout}
         />
       </div>
       <main className="flex-1 overflow-y-auto">
         <Routes>
-          <Route path="/" element={<IconGrid />} />
-          <Route path="/dashboard" element={<IconGrid />} />
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/grid" element={<IconGrid />} />
           <Route path="/materials" element={<Materials sidebarExpanded={sidebarExpanded} />} />
           <Route path="/products" element={<Products />} />
           <Route path="/fulfillment" element={<Fulfillment />} />

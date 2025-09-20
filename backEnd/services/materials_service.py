@@ -10,7 +10,11 @@ def get_material(db: Session, material_id: int) -> Optional[Material]:
     return db.query(Material).filter(Material.id == material_id).first()
 
 def create_material(db: Session, material: MaterialCreate) -> Material:
-    db_material = Material(**material.dict())
+    material_data = material.dict()
+    # Ensure quantity is always a valid integer
+    if material_data.get('quantity') is None:
+        material_data['quantity'] = 0
+    db_material = Material(**material_data)
     db.add(db_material)
     db.commit()
     db.refresh(db_material)
@@ -23,6 +27,9 @@ def update_material(db: Session, material_id: int, material_update: MaterialUpda
     
     update_data = material_update.dict(exclude_unset=True)
     for field, value in update_data.items():
+        # Ensure quantity is always a valid integer
+        if field == 'quantity' and value is None:
+            value = 0
         setattr(db_material, field, value)
     
     db.commit()

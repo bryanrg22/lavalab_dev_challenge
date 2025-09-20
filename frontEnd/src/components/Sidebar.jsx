@@ -42,6 +42,15 @@ const IntegrationsIcon = () => (
   </svg>
 )
 
+const DashboardIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <rect x="3" y="3" width="7" height="7" />
+    <rect x="14" y="3" width="7" height="7" />
+    <rect x="14" y="14" width="7" height="7" />
+    <rect x="3" y="14" width="7" height="7" />
+  </svg>
+)
+
 const AIIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
     <path d="M9.5 2A2.5 2.5 0 0112 4.5v15a2.5 2.5 0 01-4.96.44 2.5 2.5 0 01-2.96-3.08 3 3 0 013-3.66 2.5 2.5 0 010-3.2 2.5 2.5 0 01-2.96-3.08A2.5 2.5 0 019.5 2z" />
@@ -58,6 +67,7 @@ const LogoutIcon = () => (
 )
 
 const menuItems = [
+  { path: "/", label: "Dashboard", icon: DashboardIcon },
   { path: "/materials", label: "Materials", icon: MaterialsIcon },
   { path: "/products", label: "Products", icon: ProductsIcon },
   { path: "/fulfillment", label: "Fulfillment", icon: FulfillmentIcon },
@@ -65,7 +75,7 @@ const menuItems = [
   { path: "/ai-assistant", label: "AI Assistant", icon: AIIcon },
 ]
 
-function Sidebar({ expanded = true, onToggle }) {
+function Sidebar({ expanded = true, onToggle, onLogout }) {
   const location = useLocation()
 
   return (
@@ -148,11 +158,14 @@ function Sidebar({ expanded = true, onToggle }) {
       {/* Bottom Section */}
       <div className={`${expanded ? 'px-3' : 'px-2'} pb-6 space-y-4`}>
         {/* Logout */}
-        <button className={`flex items-center transition-all duration-200 ${
-          expanded 
-            ? 'gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-lg w-full'
-            : 'justify-center p-2 text-red-500 hover:bg-red-50 rounded'
-        }`}>
+        <button 
+          onClick={onLogout}
+          className={`flex items-center transition-all duration-200 ${
+            expanded 
+              ? 'gap-3 px-3 py-2.5 text-red-500 hover:bg-red-50 rounded-lg w-full'
+              : 'justify-center p-2 text-red-500 hover:bg-red-50 rounded'
+          }`}
+        >
           <LogoutIcon />
           {expanded && (
             <span 
@@ -197,7 +210,7 @@ function Sidebar({ expanded = true, onToggle }) {
                   }}
                   className="truncate"
                 >
-                  Don't Ruin It
+                  Bryan Ramirez-Gonzalez
                 </p>
                 <p 
                   style={{
@@ -210,7 +223,7 @@ function Sidebar({ expanded = true, onToggle }) {
                   }}
                   className="truncate"
                 >
-                  Pro Crafter
+                  aka the Big Leagues
                 </p>
               </div>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9CA3AF" strokeWidth="2">

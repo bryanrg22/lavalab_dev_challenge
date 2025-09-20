@@ -36,19 +36,42 @@ const MinusIcon = () => (
   </svg>
 )
 
-const TShirtIcon = ({ color = "red" }) => (
-  <div className="w-12 h-12 rounded border border-gray-200 bg-gray-50 flex items-center justify-center">
-    {color === "red" ? (
-      <div className="w-8 h-8 bg-red-500 rounded"></div>
-    ) : color === "black" ? (
-      <div className="w-8 h-8 bg-gray-900 rounded"></div>
-    ) : color === "white" ? (
-      <div className="w-8 h-8 bg-white border border-gray-300 rounded"></div>
-    ) : (
-      <div className="w-8 h-8 bg-gray-500 rounded"></div>
-    )}
-  </div>
-)
+const TShirtIcon = ({ color = "red" }) => {
+  // T-shirt SVG icon
+  const TShirtSVG = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+      <path d="M4 4h16l-2 4v10a2 2 0 01-2 2H8a2 2 0 01-2-2V8L4 4z" />
+      <path d="M4 4l2-2h12l2 2" />
+      <path d="M8 8h8" />
+    </svg>
+  )
+
+  return (
+    <div className="w-12 h-12 rounded border border-gray-200 bg-gray-50 flex items-center justify-center">
+      {color === "red" ? (
+        <div className="w-8 h-8 bg-red-500 rounded flex items-center justify-center">
+          <TShirtSVG />
+        </div>
+      ) : color === "black" ? (
+        <div className="w-8 h-8 bg-gray-900 rounded flex items-center justify-center">
+          <TShirtSVG />
+        </div>
+      ) : color === "white" ? (
+        <div className="w-8 h-8 bg-white border border-gray-300 rounded flex items-center justify-center">
+          <TShirtSVG />
+        </div>
+      ) : color === "blue" ? (
+        <div className="w-8 h-8 bg-blue-500 rounded flex items-center justify-center">
+          <TShirtSVG />
+        </div>
+      ) : (
+        <div className="w-8 h-8 bg-gray-500 rounded flex items-center justify-center">
+          <TShirtSVG />
+        </div>
+      )}
+    </div>
+  )
+}
 
 // Data will be loaded from backend APIs
 
@@ -353,9 +376,9 @@ function Materials({ sidebarExpanded }) {
                     style={{
                       width: '48px',
                       height: '48px',
-                      borderTop: '1px solid #C19A4D',
-                      borderBottom: '1px solid #C19A4D',
-                      borderLeft: '1px solid #C19A4D',
+                      borderTop: `1px solid ${item.quantity <= item.required ? '#C19A4D' : '#D1D5DB'}`,
+                      borderBottom: `1px solid ${item.quantity <= item.required ? '#C19A4D' : '#D1D5DB'}`,
+                      borderLeft: `1px solid ${item.quantity <= item.required ? '#C19A4D' : '#D1D5DB'}`,
                       borderRight: 'none',
                       borderTopLeftRadius: '4px',
                       borderBottomLeftRadius: '4px',
@@ -418,10 +441,10 @@ function Materials({ sidebarExpanded }) {
                     style={{
                       width: '48px',
                       height: '48px',
-                      borderTop: '1px solid #C19A4D',
-                      borderBottom: '1px solid #C19A4D',
+                      borderTop: `1px solid ${item.quantity <= item.required ? '#C19A4D' : '#D1D5DB'}`,
+                      borderBottom: `1px solid ${item.quantity <= item.required ? '#C19A4D' : '#D1D5DB'}`,
                       borderLeft: 'none',
-                      borderRight: '1px solid #C19A4D',
+                      borderRight: `1px solid ${item.quantity <= item.required ? '#C19A4D' : '#D1D5DB'}`,
                       borderTopRightRadius: '4px',
                       borderBottomRightRadius: '4px',
                       backgroundColor: '#FFFFFF',
@@ -530,27 +553,27 @@ function Materials({ sidebarExpanded }) {
       {/* Add New Material Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4">
-            <h3 className="text-lg font-semibold mb-4" style={{ color: '#1A1A1A' }}>Add New Material</h3>
+          <div className="bg-white rounded-lg p-6 w-96 max-w-full mx-4 shadow-xl">
+            <h3 className="text-xl font-bold mb-6 text-gray-900">Add New Material</h3>
             
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Material Name</label>
+                <label className="block text-sm font-semibold mb-2 text-gray-800">Material Name</label>
                 <input
                   type="text"
                   value={newMaterial.name}
                   onChange={(e) => setNewMaterial({...newMaterial, name: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A3AFF] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-gray-900 placeholder-gray-500"
                   placeholder="e.g., Gildan T-Shirt - Red / M"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Color</label>
+                <label className="block text-sm font-semibold mb-2 text-gray-800">Color</label>
                 <select
                   value={newMaterial.color}
                   onChange={(e) => setNewMaterial({...newMaterial, color: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A3AFF] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-gray-900 bg-white"
                 >
                   <option value="red">Red</option>
                   <option value="black">Black</option>
@@ -561,39 +584,38 @@ function Materials({ sidebarExpanded }) {
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Initial Quantity</label>
+                <label className="block text-sm font-semibold mb-2 text-gray-800">Initial Quantity</label>
                 <input
                   type="number"
                   value={newMaterial.quantity}
                   onChange={(e) => setNewMaterial({...newMaterial, quantity: parseInt(e.target.value) || 0})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A3AFF] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-gray-900 placeholder-gray-500"
                   placeholder="0"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: '#1A1A1A' }}>Unit</label>
+                <label className="block text-sm font-semibold mb-2 text-gray-800">Unit</label>
                 <input
                   type="text"
                   value={newMaterial.unit}
                   onChange={(e) => setNewMaterial({...newMaterial, unit: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#4A3AFF] focus:border-transparent outline-none"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-gray-400 outline-none text-gray-900 placeholder-gray-500"
                   placeholder="24 PCS"
                 />
               </div>
             </div>
             
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 mt-8">
               <button
                 onClick={() => setShowAddModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                style={{ color: '#1A1A1A' }}
+                className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddMaterial}
-                className="flex-1 px-4 py-2 bg-[#444EAA] text-white rounded-lg hover:bg-[#3A3F8A] transition-colors"
+                className="flex-1 px-4 py-3 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 Add Material
               </button>
