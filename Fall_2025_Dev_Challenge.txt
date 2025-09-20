@@ -1,0 +1,80 @@
+﻿Fall 2025 Dev Challenge
+
+
+Welcome! We will be providing you with a Figma file that outlines the design of a fictitious product. Your goal, as developers, is to bring this concept to life to the best of your ability. 
+
+
+Do what it takes to make this happen. This exercise closely simulates how you will interact with your designer to implement a project vision.
+
+
+The floor is yours in terms of tech stack and framework decisions. The purpose is to allow you to build with autonomy.
+
+
+Read the notes below for further guidance before you start building.
+
+
+Good luck!
+
+
+Notes:
+
+
+This is a software implementation challenge. However, you will be evaluated holistically with your background and skillset in mind. 
+
+
+For some of you, this challenge will be an opportunity to demonstrate your initiative and capability to learn and apply new technologies. With that in mind, do not stress the objective quality of your product compared to others. Instead, focus on the following traits you can exhibit through your build…
+
+
+We are looking for devs who:
+
+
+* Do meaningful research, and can justify their framework decisions in the context of their implementation.
+* Demonstrate confidence in themselves to learn and put their best foot forward, even in uncomfortable environments.
+* Will “make it happen.”
+
+
+All of you will be expected to perform at or exceed your skill set as it relates to this specific challenge. If you see fit, take opportunities to go above and beyond in your implementation. 
+
+
+You will be given until Friday @ 11:59 pm to submit the challenge. Final interviews will commence Saturday/Sunday morning.
+
+
+In the final interview, we expect you to defend your design. Use every tool at your disposal to build fast, but you must know your product inside and out!
+
+Looking forward to your submissions!
+
+
+
+
+
+—--------------------—--------------------—--------------------
+Figma Link:
+
+
+https://www.figma.com/design/AaitbUyUEav1P7ab6t3dQb/S25-LavaLab-Dev-Take-Home-Challenge?node-id=0-1&p=f
+
+
+—--------------------—--------------------—--------------------
+
+
+
+
+
+
+
+
+
+
+—--------------------—--------------------—--------------------
+Submission instructions:
+
+
+1. Use your (or create a) GitHub account.
+2. Create a new repo.
+3. Publish your code to this repo.
+4. Email us the link to your repo no later than the deadline of Friday @ 11:59 pm.
+5. Do not make any new commits past the deadline. We will be verifying.
+
+
+If you need assistance with GitHub or configuring this properly, please reach out to me, and I will help you. However, if you have software experience in any capacity, I expect you to be able to use/learn GitHub without any guidance. (This is reasonable.)
+—--------------------—--------------------—--------------------
